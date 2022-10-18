@@ -1,0 +1,70 @@
+version: '3.7'
+services:
+  init:
+    container_name: rust_server_init
+    build: ./src/migration
+    # tty: true
+    depends_on:
+      - db
+    environment:
+      - RUST_BACKTRACE=1
+      - DATABASE_URL=postgres://glaceon:glaceon1234@db/glaceon_db
+    #   - DATABASE_URL=${DATABASE_URL}
+    # command: cargo watch -x run
+    # command: /bin/sh -c "diesel setup && cargo watch -x run"
+    volumes:
+      - ./src/migration:/app
+      # - ./src/migration/src:/app/src
+      # - ./src/migration/sql:/app/sql
+      # - ./src/migration/Cargo.toml:/app/Cargo.toml
+      # - ./src/migration/.env:/app/.env
+
+  api:
+    container_name: rust_server_api
+    build:
+      context: ./src/api
+      target: 'develop-stage'
+    ports:
+      - "38088:8080"
+    depends_on:
+      - db
+    # condition: service_healthy
+    environment:
+      # - RUST_BACKTRACE=1
+      - DATABASE_URL=${DATABASE_URL}
+    command: cargo watch -x run
+    # command: /bin/sh -c "diesel setup && cargo watch -x run"
+    # environment:
+    #   - server_addr=0.0.0.0:8000
+    volumes:
+      - ./src/api/src:/app/src
+      - ./src/api/templates:/app/templates
+      - ./src/api/sql:/app/sql
+      - ./src/api/Cargo.toml:/app/Cargo.toml
+
+  db:
+    container_name: rust_server_db
+    image: postgres:alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=glaceon
+      - POSTGRES_PASSWORD=glaceon1234
+      - POSTGRES_DB=glaceon_db
+    # volumes:
+    #   - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  pgadmin4:
+    image: dpage/pgadmin4
+    ports:
+        - 38888:80
+    environment:
+        PGADMIN_DEFAULT_EMAIL: admin@example.com
+        PGADMIN_DEFAULT_PASSWORD: admin1234
+    depends_on:
+      - db
+
+  redis:
+    container_name: rust_server_redis
+    image: redis:latest
+    restart: always
+
